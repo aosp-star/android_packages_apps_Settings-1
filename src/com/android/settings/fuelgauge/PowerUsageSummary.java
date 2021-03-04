@@ -27,6 +27,7 @@ import android.content.IntentFilter;
 import android.database.ContentObserver;
 import android.icu.text.NumberFormat;
 import android.net.Uri;
+import android.os.BatteryManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
@@ -414,6 +415,29 @@ public class PowerUsageSummary extends PowerUsageBase implements OnLongClickList
     }
 
     @VisibleForTesting
+    public void quickUpdateHeaderPreference() {
+        final Context context = getContext();
+        if (context == null) {
+            return;
+        }
+	Intent batteryBroadcast = context.registerReceiver(null,
+        new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        final int batteryLevel = Utils.getBatteryLevel(batteryBroadcast);
+        final boolean discharging =
+        batteryBroadcast.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1) == 0;
+	final BatteryMeterView batteryView = (BatteryMeterView) mBatteryLayoutPref
+			                .findViewById(R.id.battery_header_icon);
+	final TextView PercentText = (TextView) mBatteryLayoutPref.findViewById(R.id.battery_percent);
+	final TextView summary1 = (TextView) mBatteryLayoutPref.findViewById(R.id.summary1);
+
+	// Set battery level and charging status
+	batteryView.setBatteryLevel(batteryLevel);
+	batteryView.setCharging(!discharging);
+	batteryView.setPowerSave(mPowerManager.isPowerSaveMode());
+	PercentText.setText(formatBatteryPercentageText(batteryLevel));
+    }
+
+    @VisibleForTesting
     void initHeaderPreference() {
         if (getContext() != null) {
             final BatteryMeterView batteryView = (BatteryMeterView) mBatteryLayoutPref
@@ -493,7 +517,7 @@ public class PowerUsageSummary extends PowerUsageBase implements OnLongClickList
         super.restartBatteryStatsLoader(refreshType);
         // Update battery header if battery is present.
         if (mIsBatteryPresent) {
-            mBatteryHeaderPreferenceController.quickUpdateHeaderPreference();
+            quickUpdateHeaderPreference();
         }
     }
 
